@@ -308,3 +308,7 @@ Es menos precisa pero tiene menos impacto en el rendimiento que otras opciones.
 `sudo perf report`
 
 <img width="769" height="1386" alt="image" src="https://github.com/user-attachments/assets/b6d7ec88-183b-45bc-b997-f5ddc50f1453" />
+
+### Conclusion
+
+En este trabajo práctico se analizó el rendimiento de las computadoras considerando la relación entre frecuencia y tiempo de ejecución, la comparación de procesadores en tareas paralelizables y el uso de herramientas de profiling. Se observó que aumentar la frecuencia o la cantidad de núcleos no reduce el tiempo de ejecución de forma proporcional debido a las partes secuenciales del programa y al overhead del sistema, lo que se relaciona con la Ley de Amdahl. Además, se comprobó que el rendimiento no depende solo del hardware sino también de cómo se optimiza el software, ya que mediante profiling es posible identificar cuellos de botella y mejorar las partes críticas del programa. En conclusión, el rendimiento de un sistema es el resultado del equilibrio entre frecuencia, paralelismo, eficiencia y optimización del código.
