@@ -7,7 +7,7 @@ Como referencia, tomaremos una ejecución base configurada para durar alrededor 
 
 El código es el siguiente:
 
-``` cpp
+```cpp
 #include <Arduino.h>
 
 const uint32_t DEFAULT_ITERATIONS = 70460000;
@@ -64,7 +64,7 @@ void loop() {
 
 Luego de ejecutar el siguiente código se obtiene la siguiente salida por consola:
 
-```
+```text
 ESP32 automatic time benchmark
 Running 70460000 iterations for each supported frequency...
 CPU Frequency: 80 MHz
@@ -156,10 +156,190 @@ En términos de costo total (dinero y energía), la conclusión depende del crit
 
 - **Rendimiento absoluto**: Ryzen 9 7950X (menor tiempo total).
 - **Relación precio/rendimiento**: i5-13600K (muy buen desempeño con costo menor que el 7950X).
-- **Rendimiento por watt**: Ryzen 9 5900X (opción equilibrada con menor consumo relativo).
+- **Rendimiento por Watt**: Ryzen 9 5900X (opción equilibrada con menor consumo relativo).
 
 Por lo tanto, si el objetivo principal es terminar antes la compilación conviene el 7950X; si se prioriza costo-beneficio general conviene el i5-13600K; y si se prioriza consumo energético, el 5900X aparece como la alternativa más eficiente.
 
 ## 3. GNU GCC Profiling
 
 Ahora en este apartado realizaremos la guía de Time profiling siguiendo los procedimientos propuestos.
+
+### 3.1. Preparación y ejecución del programa instrumentado
+
+Primero se compiló el programa con soporte de profiling usando `-pg`, enlazando ambos archivos fuente para generar el ejecutable `test_gprof`.
+
+Comando utilizado:
+
+```bash
+gcc -Wall -pg test_gprof.c test_gprof_new.c -o test_gprof
+```
+
+![Compilación con -pg](attachments/Screenshot_20260329_214323%20%281%29.png)
+
+Luego se verificó la generación del ejecutable y la presencia de los archivos en el directorio de trabajo.
+
+```bash
+ls
+```
+
+![Verificación de archivos](attachments/Screenshot_20260329_214506%20%282%29.png)
+
+Después se ejecutó el binario para que se cree el archivo `gmon.out` con los datos de profiling.
+
+```bash
+./test_gprof
+```
+
+![Ejecución del binario](attachments/Screenshot_20260329_214728%20%283%29.png)
+
+Finalmente se volvió a listar el directorio para confirmar la creación de `gmon.out`.
+
+```bash
+ls
+```
+
+![Generación de gmon.out](attachments/Screenshot_20260329_214848%20%284%29.png)
+
+### 3.2. Análisis de resultados con gprof
+
+En esta etapa se ejecutó `gprof` con distintas opciones, guardando cada salida en los logs numerados del 1 al 5.
+
+#### Log 1 - Salida base de gprof
+
+Comando:
+
+```bash
+gprof test_gprof gmon.out > analysis.txt
+```
+
+Captura:
+
+![gprof salida base](attachments/Screenshot_20260329_215044%20%285%29.png)
+
+Archivo asociado: `logs/analysis_1.txt`
+
+Breve interpretación: en la corrida base, `func1` consume la mayor parte del tiempo de CPU, seguida por `func2`; además se observa el grafo de llamadas completo.
+
+```text
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+    %   cumulative   self              self     total
+ time   seconds   seconds    calls   s/call   s/call  name
+ 57.39      6.25     6.25        1     6.25     6.63  func1
+ 35.69     10.14     3.89        1     3.89     3.89  func2
+    3.59     10.53     0.39                             main
+    3.50     10.91     0.38        1     0.38     0.38  new_func1
+```
+
+#### Log 2 - Opción -a
+
+Comando:
+
+```bash
+gprof -a test_gprof gmon.out > analysis.txt
+```
+
+Captura:
+
+![gprof con -a](attachments/Screenshot_20260329_215925%20%286%29.png)
+
+Archivo asociado: `logs/analysis_2.txt`
+
+Breve interpretación: con `-a` se muestran conteos estáticos en el reporte; en esta salida predomina `func1` y aparece con 2 llamadas.
+
+```text
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+    %   cumulative   self              self     total
+ time   seconds   seconds    calls   s/call   s/call  name
+ 93.08     10.14    10.14        2     5.07     5.26  func1
+    3.59     10.53     0.39                             main
+    3.50     10.91     0.38        1     0.38     0.38  new_func1
+```
+
+#### Log 3 - Opción -b
+
+Comando:
+
+```bash
+gprof -b test_gprof gmon.out > analysis.txt
+```
+
+Captura:
+
+![gprof con -b](attachments/Screenshot_20260329_220210%20%287%29.png)
+
+Archivo asociado: `logs/analysis_3.txt`
+
+Breve interpretación: `-b` muestra una versión breve del reporte (sin textos explicativos extensos), manteniendo flat profile, call graph e índice.
+
+```text
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+    %   cumulative   self              self     total
+ time   seconds   seconds    calls   s/call   s/call  name
+ 57.39      6.25     6.25        1     6.25     6.63  func1
+ 35.69     10.14     3.89        1     3.89     3.89  func2
+    3.59     10.53     0.39                             main
+    3.50     10.91     0.38        1     0.38     0.38  new_func1
+```
+
+#### Log 4 - Opciones -p -b
+
+Comando:
+
+```bash
+gprof -p -b test_gprof gmon.out > analysis.txt
+```
+
+Captura:
+
+![gprof con -p -b](attachments/Screenshot_20260329_220406%20%288%29.png)
+
+Archivo asociado: `logs/analysis_4.txt`
+
+Breve interpretación: con `-p -b` se enfoca la salida en el flat profile (resumen por función), eliminando el call graph.
+
+```text
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+    %   cumulative   self              self     total
+ time   seconds   seconds    calls   s/call   s/call  name
+ 57.39      6.25     6.25        1     6.25     6.63  func1
+ 35.69     10.14     3.89        1     3.89     3.89  func2
+    3.59     10.53     0.39                             main
+    3.50     10.91     0.38        1     0.38     0.38  new_func1
+```
+
+#### Log 5 - Opciones -pfunc1 -b
+
+Comando:
+
+```bash
+gprof -pfunc1 -b test_gprof gmon.out > analysis.txt
+```
+
+Captura:
+
+![gprof filtrado por func1](attachments/Screenshot_20260329_220556%20%289%29.png)
+
+Archivo asociado: `logs/analysis_5.txt`
+
+Breve interpretación: se filtra el reporte para mostrar únicamente `func1`, lo cual permite aislar su tiempo de ejecución sin el resto de funciones.
+
+```text
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+    %   cumulative   self              self     total
+ time   seconds   seconds    calls   s/call   s/call  name
+100.29      6.25     6.25        1     6.25     6.25  func1
+```
+
+### 3.3. Conclusión
+
+El proceso de Time profiling permitió identificar rápidamente dónde se concentra el tiempo de CPU. En todos los reportes `func1` aparece como la función dominante, mientras que `func2` y `new_func1` tienen menor impacto relativo. Las distintas flags de `gprof` no cambian el comportamiento del programa, pero sí la forma en que se presenta la información, permitiendo pasar de un reporte completo a uno resumido o filtrado por función.
