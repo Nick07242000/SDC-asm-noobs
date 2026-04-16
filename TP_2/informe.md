@@ -116,13 +116,37 @@ El resultado es un único archivo `libgini.so` que contiene tanto el código C c
 
 ### Iteracion #1
 
-...
-
-#### Python
-
-...
+La arquitectura de esta iteración usa Python para consultar la API, extrae los valores float y los pasa uno a uno a una función compilada en C (`.so`). C realiza la conversión `float → int` y la suma `+1` usando aritmética nativa, sin assembler todavía.
 
 #### C
+
+La función `gini_convert` recibe un float, lo trunca a entero y le suma 1.
+
+```C
+
+#include <stdio.h>
+
+int gini_convert(float gini_value) {
+    int as_int = (int) gini_value;
+    return as_int + 1;
+}
+
+```
+
+Y la compilamos como libreria compartida usando los flags:
+- shared : genera un .so en lugar de un ejecutable
+- Wextra : habilita advertencias extras durante el linkeo
+- fPIC : habilita Position Indepent Code requerido para librerias dinamicas
+
+```bash
+gcc -shared -Wextra -fPIC -o libgini.so gini_calc.c
+```
+
+> Position Independent Code:  
+> Mandatorio en arquitecturas x86_64 para garantizar que el código generado sea agnóstico a la dirección de memoria en la que se carga.  
+> Permite que el intérprete de Python a través de ctypes pueda mapear la librería de forma dinámica en su propio espacio de direcciones sin conflictos
+
+#### Python
 
 ...
 
