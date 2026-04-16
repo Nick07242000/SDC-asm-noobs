@@ -189,6 +189,39 @@ for record in records:
     print(f"{year:<6} {gini_float:<16.2f} {gini_int1}")
 ```
 
+#### Ejecucion
+
+Para mayor facilidad de construccion y ejecucion generamos un Makefile simple:
+
+```Makefile
+all: libgini.so
+
+libgini.so: gini_calc.c
+	gcc -shared -fPIC -o libgini.so gini_calc.c
+
+clean:
+	rm -f libgini.so
+```
+
+De esta forma podemos construir la libreria compartida y ejecutar el script:
+
+```bash
+hive@hive-MS-7B84:~/Documents/SC/SDC-asm-noobs/TP_2/IT_1$ make
+gcc -shared -fPIC -o libgini.so gini_calc.c
+hive@hive-MS-7B84:~/Documents/SC/SDC-asm-noobs/TP_2/IT_1$ python3 gini_api.py
+Año    GINI (float)     GINI (int) + 1
+------------------------------------
+2011   42.70            43
+2012   41.40            42
+2013   41.10            42
+2014   41.80            42
+2016   42.30            43
+2017   41.40            42
+2018   41.70            42
+2019   43.30            44
+2020   42.70            43
+```
+
 ---
 
 ### Iteracion #2
