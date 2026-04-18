@@ -232,7 +232,43 @@ Python no se modifica en absoluto, la interfaz de la `.so` permanece idéntica.
 
 #### Assembler
 
-...
+Generamos la funcion global `gini_convert` en Assemble disponible para ser llamada desde C, donde recibimos e valor GINI como un float de 32 bits en el registro `xmm0`, y devolvemos un entero de 64 bits en el registro `rax`.
+
+El float es transformado y truncado hacia cero, y al entero resultante se le adiciona uno.
+
+Para realizar esto aplicamos las convenciones de llamada:
+- Argumento float  -> `xmm0`
+- Valor de retorno -> `rax`
+- Frame  -> preserva `rbp`, respeta alineacion de 16 bytes
+
+```asm
+.text
+    .global gini_convert          # visible para C
+
+gini_convert:
+    # ========================= Frame ===================================
+    pushq   %rbp                  # guarda el frame pointer del caller
+    movq    %rsp, %rbp            # establece el nuevo frame pointer
+
+    # ========================= Convert =================================
+    # lee el float de 32 bits en xmm0
+    # convierte el float a int truncando hacia cero
+    # escribe el entero de 64 bits en rax
+    cvttss2siq %xmm0, %rax        # rax = (int) xmm0
+
+    # ========================= Add =====================================
+    addq    $1, %rax              # rax = rax + 1
+
+    # ========================= Return ==================================
+    popq    %rbp                  # restaura el frame pointer del caller
+    ret                           # el resultado queda disponible en rax
+```
+
+Se utiliza el registro `xmm0` para pasar el argumento float siguiendo la convencion de llamadas definida en la ABI:
+
+> SSE The class consists of types that fit into a vector register.
+> Arguments of types float, double, _Decimal32, _Decimal64 and __m64 are in class SSE.
+> If the class is SSE, the next available vector register is used, the registers are taken in the order from %xmm0 to %xmm7.
 
 #### C
 
@@ -296,6 +332,6 @@ Python no se modifica en absoluto, la interfaz de la `.so` permanece idéntica.
 
 ### Referencias
 
-[] - ref_one_ex
+[] - [System V Application Binary Interface - AMD64 Architecture Processor Supplement - Draft Version 0.99.6](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 
 [] - ref_two_ex
