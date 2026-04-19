@@ -391,7 +391,7 @@ Inmediatemente despues del `call` se apila un nuevo frame.
 
 #### Durante `gini_convert`
 
-El valor `float`se guarda en el registro `rax`.
+El valor `float` se guarda en el registro `rax`.
 
 ![](img/antes-truncamiento.png)
 
@@ -413,7 +413,82 @@ Al salir de `gini_convert` se desapila el frame del stack.
 
 ### Resultados
 
-...
+En esta sección se sintetizan los resultados funcionales y técnicos obtenidos en cada iteración, contrastandolos con la teoría trabajada en el TP (arquitectura multicapa, convencion ABI System V AMD64 y comportamiento de instrucciones SIMD para conversion numerica).
+
+#### Resultado de la Iteración #1 (Python + C)
+
+La Iteración #1 cumplió con el objetivo de validar el flujo completo de datos sin introducir complejidad de bajo nivel:
+
+1. Python consultó correctamente la API REST y obtuvo registros validos para Argentina.
+2. Se filtró y ordenó la serie temporal (2011-2020, con ausencia de 2015 por dato no disponible en la fuente).
+3. La libreria compartida en C fue invocada sin errores mediante `ctypes`.
+4. La conversión `(int) float` y la suma `+1` entregaron salidas consistentes para todos los años.
+
+Resultados observados:
+
+| Año | GINI (float) | Truncado (int) | Resultado final (int + 1) |
+| --- | ---: | ---: | ---: |
+| 2011 | 42.70 | 42 | 43 |
+| 2012 | 41.40 | 41 | 42 |
+| 2013 | 41.10 | 41 | 42 |
+| 2014 | 41.80 | 41 | 42 |
+| 2016 | 42.30 | 42 | 43 |
+| 2017 | 41.40 | 41 | 42 |
+| 2018 | 41.70 | 41 | 42 |
+| 2019 | 43.30 | 43 | 44 |
+| 2020 | 42.70 | 42 | 43 |
+
+Interpretación:
+
+- Se verifica que la conversion utilizada es por truncamiento hacia cero, no por redondeo.
+- El comportamiento coincide con la logica esperada: `resultado = trunc(gini_float) + 1`.
+- Esta iteración funcionó como baseline funcional para comparar la posterior sustitucion por assembler.
+
+#### Resultado de la Iteración #2 (Python + C + Assembler)
+
+En la Iteracion #2 se reemplazó la lógica de conversion en C por la rutina ASM `gini_convert`, manteniendo sin cambios la interfaz externa de la libreria (`extern int gini_convert(float)` en C y firma equivalente en Python).
+
+Hallazgos principales:
+
+1. El ensamblado y enlace fueron correctos (`gini_calc.S` + `gini_calc.c` -> `libgini.so`).
+2. El simbolo `gini_convert` quedo correctamente exportado (verificacion con `nm`).
+3. La salida funcional del programa fue identica a la de Iteración #1 para todos los casos.
+4. Se valido que el pasaje de parametro y retorno respeta ABI: argumento `float` por `xmm0`, retorno entero por `rax`.
+
+Comparacion Iteracion #1 vs Iteracion #2:
+
+- Diferencia en resultados numericos: nula (0 discrepancias sobre 9 registros).
+- Diferencia en implementacion: en Iteracion #1 el calculo vive en C; en Iteracion #2 vive en ASM.
+- Diferencia en objetivo: Iteracion #2 agrega verificacion de interoperabilidad de bajo nivel sin romper la capa superior.
+
+Este resultado confirma que la migracion del nucleo de computo a assembler preserva el contrato funcional del sistema, que era uno de los objetivos centrales del trabajo.
+
+#### Resultado del Analisis con GDB (validación de bajo nivel)
+
+El analisis con GDB-Dashboard permitió observar evidencia directa del comportamiento teórico esperado durante la llamada a `gini_convert`.
+
+1. Antes del `call`: el stack se encuentra en estado estable del caller, listo para transferir control.
+2. Durante el `call`: se apila la direccion de retorno y se crea un nuevo frame para la rutina llamada.
+3. Dentro de `gini_convert`: la instruccion `cvttss2si` realiza la conversion `float -> int` por truncamiento.
+4. Luego de `add $1`: el resultado final queda almacenado en `rax`.
+5. Despues del `ret`: el frame se desapila y la ejecucion vuelve al caller con stack restaurado.
+
+Relación con la teoría:
+
+- Lo observado en stack frames coincide con el modelo de llamada/retorno de la arquitectura x86-64.
+- La ubicacion del argumento en `xmm0` y del retorno en `rax` coincide con System V AMD64 ABI.
+- El efecto de `cvttss2si` observado en registros coincide con su definicion teórica: conversión escalar con truncamiento hacia cero.
+
+Como resultado, GDB no solo mostro que el programa funciona, sino que permitió comprobar que funciona por las razones correctas a nivel de convencion de llamadas y manejo de stack.
+
+#### Sintesis global de resultados
+
+1. Se cumplió el objetivo funcional en todas las iteraciones: obtener GINI desde API, convertir a entero y sumar 1.
+2. Se mantuvo estabilidad de interfaz entre capas, permitiendo evolucionar la implementación interna sin modificar Python.
+3. Se obtuvo equivalencia total entre implementacion en C e implementacion en ASM para los datos evaluados.
+4. Se valido experimentalmente con GDB la correspondencia entre teoria (ABI, stack frame, conversion numerica) y ejecucion real.
+
+En términos de aprendizaje, el resultado mas relevante fue demostrar que una arquitectura por capas permite introducir assembler de forma incremental y verificable, minimizando riesgo de regresiones funcionales.
 
 ---
 
@@ -441,7 +516,13 @@ Sin embargo, estamos utilizando gcc dentro del entorno de desarrollo de Linux, p
 
 ### Conclusiones
 
-...
+En este trabajo se logró implementar y validar una arquitectura multicapa completa para el procesamiento del indice GINI, integrando de forma incremental Python, C y assembler x86-64. La estrategia por iteraciones permitio avanzar desde una solucion funcional simple hacia una implementacion de menor nivel, manteniendo estabilidad en la interfaz entre capas y reduciendo el riesgo de regresiones.
+
+La Iteracion #1 cumplio su objetivo como linea base: confirmar la correcta obtencion de datos desde la API, el filtrado de registros validos y el procesamiento numerico esperado. Sobre esa base, la Iteracion #2 demostró que la migración del núcleo de cálculo a assembler mantiene equivalencia funcional total respecto de la version en C, respetando además las convenciones de llamada de la ABI System V AMD64.
+
+La etapa de analisis con GDB (Iteracion #3) aporto evidencia concreta del comportamiento interno del programa: manejo de stack frame, transferencia de control en `call/ret`, uso de registros (`xmm0` para argumento y `rax` para retorno) y conversion por truncamiento mediante `cvttss2si`. Esto permitio vincular de manera directa la teoría trabajada en la materia con la ejecucion real del sistema.
+
+Como conclusion general, el trabajo no solo cumple el requerimiento funcional planteado, sino que tambien consolida aprendizajes clave de interoperabilidad entre lenguajes, debugging de bajo nivel y aplicacion práctica de convenciones ABI.
 
 ---
 
