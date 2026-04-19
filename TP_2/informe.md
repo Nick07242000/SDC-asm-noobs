@@ -348,9 +348,37 @@ Año    GINI (float)     GINI (int) + 1
 
 ...
 
-#### Configuracion
+#### Configuración
 
-...
+Para la configuración de GDB-Dashboard ejecutamos los siguientes comandos:
+
+```bash
+git clone https://github.com/cyrus-and/gdb-dashboard.git ~/gdb-dashboard
+```
+Comprobamos que exista el archivo `.gdbinit`
+
+```bash
+ls ~/gdb-dashboard/.gdbinit
+```
+Compilamos el programa puro en lenguaje C utilizando `Makefile` (el cual ya tiene el flag `-g3`), generando el ejecutable `gini_api_c`.
+
+Ejecutamos con `gdb`:
+```bash
+gdb ./gini_api_c
+```
+Para poder ver el dashboard iniciamos con `start`.
+
+Para tener una mejor visualización acomodamos el `layout`.
+
+```bash
+>>> dashboard -layout source breakpoints stack assembly registers  
+```
+Fijamos un breakpoint en la linea 104, le damos continuación y empezamos a ver instrucción por instrucción en el bloque de assembly con `stepi`.
+```bash
+>>> br 104
+>>> c
+>>> stepi
+```
 
 #### Stack antes de `call`
 
