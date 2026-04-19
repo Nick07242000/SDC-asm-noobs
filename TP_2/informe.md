@@ -354,15 +354,28 @@ Año    GINI (float)     GINI (int) + 1
 
 #### Stack antes de `call`
 
-...
+![](img/stack-antes-call.png)
+En el código assembly se puede ver que está a punto de hacer el `call` a `gini_convert`.
 
 #### Stack durante `call`
 
-...
+![](img/stack-durante-call.png)
+Inmediatemente despues del `call` se apila un nuevo frame.
+
+#### Durante `gini_convert`
+El valor `float`se guarda en el registro `rax`.
+![](img/antes-truncamiento.png)
+
+Luego, se puede ver como con `cvttss2si` se produce el truncamiento en `rax`, pasando de `float` a `int`
+![](img/despues-truncamiento.png)
+
+Y finalmente se le suma 1.
+![](img/despues-add1.png)
 
 #### Stack despues de `call`
 
-...
+![](img/stack-despues-call.png)
+Al salir de `gini_convert` se desapila el frame del stack.
 
 ---
 
