@@ -167,4 +167,20 @@ Finalmente tiene mas vida util del hardware añadiendo soporte para nuevas funci
 
 ### Referencias
 
-> ...
+> [UEFI](https://www.lenovo.com/ar/es/glosario/uefi/?orgRef=https%253A%252F%252Fwww.google.com%252F&srsltid=AfmBOoor62-eWIfMZRmqttBQIAzpi4Ajjr5AdGcm7_H7YJSJBs37MAms)
+
+> [UEFI Functions](https://uefi.org/specs/UEFI/2.10/01_Introduction.html)
+
+> [UEFI Bugs](https://www.binarly.io/blog/efixplorer-hunting-uefi-firmware-nvram-vulnerabilities)
+
+> [Vulnerabilidad Secure Boot](https://www.welivesecurity.com/es/investigaciones/uefi-secure-boot-vulnerabilidad-bootkit/)
+
+> [Vulnerabilidad Black Lotus](https://www.binarly.io/blog/the-untold-story-of-the-blacklotus-uefi-bootkit)
+
+> [Vulnerabilidad LogoFAIL](https://tuxcare.com/blog/logofail-vulnerabilities/)
+
+> [Converged Security and Management Engine](https://www.intel.la/content/www/xl/es/download/19392/intel-converged-security-and-management-engine-version-detection-tool-intel-csmevdt.html)
+
+> [Intel Management Engine BIOS Extension](https://dl.dell.com/manuals/all-products/esuprt_laptop/esuprt_latitude_laptop/latitude-e6400_administrator-guide_es-mx.pdf)
+
+> [Coreboot](https://www.coreboot.org/)
