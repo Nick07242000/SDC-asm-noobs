@@ -181,12 +181,15 @@ La opción `--oformat binary` elimina toda esa estructura extra y deja únicamen
 
 > Compare la salida de objdump con hd, verifique donde fue colocado el programa dentro de la imagen. 
 
-La comparación nos permite ver el programa desde dos perspectivas:
-* *objdump -S:* Nos muestra la vista lógica, relacionando las instrucciones de ensamblador con sus direcciones de memoria y los opcodes resultantes (por ejemplo, ver que la instrucción `hlt` se traduce al byte `f4`).
-* *hd (hexdump):* Nos muestra la vista física del archivo `.img`. Aquí verificamos que los bytes estén en el orden exacto y que la firma de arranque `55 AA` ocupe los bytes 511 y 512 del sector. Al contrastarlos, confirmamos que el linker colocó cada sección en el offset correcto para que la BIOS lo reconozca como un disco booteable.
+La comparación de estos comandos nos permite contrastar la vista lógica de nuestro programa con la ubicación física final de sus bytes dentro del disco booteable generado por el linker:
 
-> ![IMPORTANT]
-> Falta imagenes de estos comandos
+* **objdump -d main.o (Panel izquierdo):** Nos muestra el desensamblado del archivo objeto, relacionando las instrucciones lógicas con su código máquina (opcodes). Por ejemplo, en la columna central podemos verificar que la instrucción `int $0x10` (encargada de imprimir en video) se traduce a los bytes `cd 10`, y que la detención del procesador mediante `hlt` corresponde al byte `f4`. Debajo, observamos el inicio de nuestra cadena de texto en la etiqueta `<msg>`.
+* **hd main.img (Panel derecho):** Nos muestra el volcado hexadecimal estructurado del archivo binario plano final (`.img`). En esta vista física podemos comprobar el trabajo del linker en tres puntos críticos:
+    1.  **Ubicación del código:** Buscando en el volcado, encontramos nuestros opcodes y la cadena de texto `"hello from asm_noobs"` incrustados correctamente en el binario (visibles a la derecha entre los offsets `00000070` y `00000090`).
+    2.  **Relleno (Padding):** El linker calculó el espacio sobrante de nuestro código y lo rellenó automáticamente con ceros (`00`) para alcanzar el tamaño exacto de un sector de disco.
+    3.  **Firma de arranque:** En la última línea del sector, correspondiente al offset `000001f0`, verificamos que los últimos dos bytes son exactamente `55 aa`. Esta es la firma mágica obligatoria que debe ubicarse en los bytes 511 y 512 para que la BIOS reconozca al dispositivo como booteable.
+
+![Comparación en terminal de los opcodes lógicos (objdump) y la estructura física del binario booteable (hd)](Screenshot_20260427_114945.png)
 
 #### Generacion y Execucion de Imagen
 
