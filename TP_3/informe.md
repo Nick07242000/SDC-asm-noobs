@@ -223,7 +223,7 @@ Una vez obtenida la imagen booteable podemos probar el funcionamiento de esto ut
 
 * **Virtualizacion:** `qemu-system-x86_64 -hda main.img`
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > Imagen QEMU
 
 Verificada el correcto funcionamiento de la imagen, procedemos a grabarla en un pendrive para ejecutarla en la PC.
@@ -231,8 +231,7 @@ Verificada el correcto funcionamiento de la imagen, procedemos a grabarla en un 
 * **Escritura a bajo nivel:** `sudo dd if=main.img of=/dev/<DRIVE_ID>`
   La herramienta `dd` toma nuestra imagen y escribe sus bytes exactos directamente en el primer sector físico del USB (`/dev/sdb`), ignorando cualquier sistema de archivos previo y convirtiendo al dispositivo en un disco de arranque válido (MBR).
 
-> ![IMPORTANT]
-> Imagen ejecucion de comandos
+<img width="1366" height="768" alt="ef3a07a9-388c-4c71-8f81-0cd22c4845b2" src="https://github.com/user-attachments/assets/f474e478-3db4-4f53-bc03-38be23dbd2b1" />
 
 Para facilitar este proceso generamos un makefile donde estan disponibles las opciones:
 - `make`: solo compila la imagen
@@ -275,9 +274,7 @@ Finalmente, procedimos a probar el pendrive booteable. Para sortear las restricc
 
 Al encender el equipo y seleccionar el pendrive en el menú de arranque, nos encontramos con que no conseguia imprimir la cadena de caracteres:
 
-> ![IMPORTANT]
-> Imagen juanma que no anda
-> Video nico que no anda
+https://github.com/user-attachments/assets/604e5dd4-92ef-4df4-af70-14da733ebfc7
 
 Comenzamos a debuggear y decidimos inicializar manualmente los segmentos para garantizar el estado limpio del procesador al iniciar el sistema:
 
@@ -293,8 +290,7 @@ Comenzamos a debuggear y decidimos inicializar manualmente los segmentos para ga
 
 Esto resulto en un avance donde se logro imprimir algunas letras de la frase:
 
-> ![IMPORTANT]
-> Video nico "he"
+https://github.com/user-attachments/assets/fb9eb333-796d-464a-b063-54d500646037
 
 Asi sospechamos que quizas una interrupcion estaba deteniendo la ejecucion del sistema, por lo que decidimos apagarlas y agregar un safeguard por si la cpu se encendia milagrosamente:
 
@@ -307,9 +303,9 @@ halt:
 
 Realizando esto en una de las PC se logro imprimir el valor de "hell" ironicamente, y en otra se dejo de imprimir:
 
-> ![IMPORTANT]
-> Imagen juanma hell
-> Video nico rompio de nuevo
+<img width="1200" height="1600" alt="WhatsApp Image 2026-04-27 at 01 49 57" src="https://github.com/user-attachments/assets/3bc6fdd7-93ae-410b-8798-3cc8c83d5f49" />
+
+https://github.com/user-attachments/assets/e3921ae8-dca6-4f32-8593-b5f792a91fc5
 
 Esta diferencia de comportamiento nos hizo sospechar que quizas las instrucciones estaban siendo overwritten o el programa se estaba corrompiendo. Investigando encontramos que la BIOS puede sobreescribir algunas instrucciones del programa, por lo cual investigamos como protegernos de eso y llegamos a las siguientes instrucciones:
 
@@ -330,8 +326,7 @@ skip_bpb:
 
 Con estos ajustes logramos imprimir el mensaje por pantalla:
 
-> ![IMPORTANT]
-> Video nico funciona
+https://github.com/user-attachments/assets/00196f31-dc45-49c6-8446-a22b7e966b44
 
 #### Analisis de Imagen Simple
 
@@ -340,8 +335,7 @@ Finalmente en este desafio realizamos un analisis de la imagen original simple.
 Para iniciar la sesión de depuración en frío, lanzamos el emulador utilizando el siguiente comando:
 * `qemu-system-i386 -fda main.img -boot a -s -S -monitor stdio`: Inicia la máquina virtual cargando nuestra imagen, pero congela la ejecución de la CPU antes de la primera instrucción (`-S`) y abre un servidor local (`-s`) a la espera de que nos conectemos.
 
-> ![IMPORTANT]
-> QEMU iniciado en estado de pausa
+<img width="1366" height="768" alt="WhatsApp Image 2026-04-27 at 01 49 57 (1)" src="https://github.com/user-attachments/assets/b8353c2d-a070-4309-b71e-6a6f720cc536" />
 
 Desde una terminal secundaria iniciamos GDB y ejecutamos la siguiente secuencia para tomar el control del hardware emulado:
 * `target remote localhost:1234`: Establece la conexión directa con la sesión de QEMU.
@@ -350,22 +344,19 @@ Desde una terminal secundaria iniciamos GDB y ejecutamos la siguiente secuencia 
 * `continue`: Permite que la BIOS ejecute su rutina de inicio normal y nos devuelva el control al llegar a nuestro código.
 * `info registers`: Imprime el estado interno del procesador. Aquí confirmamos que el registro `eip` (Instruction Pointer) apuntaba a `0x7c00`.
 
-> ![IMPORTANT]
-> Conexión de GDB, breakpoint y estado de los registros
+<img width="1366" height="768" alt="WhatsApp Image 2026-04-27 at 01 49 58" src="https://github.com/user-attachments/assets/99095702-ce02-453c-8730-c9c06c06425a" />
 
 Para evitar que el depurador ingrese a leer las rutinas internas de la placa madre al momento de imprimir texto, necesitamos identificar nuestras instrucciones físicas en memoria:
 * `x/15i $pc`: Examina y traduce a lenguaje ensamblador las próximas 15 instrucciones a partir del Program Counter actual. Esto nos permitió ubicar la interrupción (`int $0x10`) en `0x7c0a`.
 * `break *0x7c0c`: Establece un segundo punto de interrupción en la instrucción inmediatamente posterior al llamado de video (`jmp 0x7c05`), creando una barrera de contención.
 
-> ![IMPORTANT]
-> Inspección de memoria con decodificación de instrucciones y creación del segundo breakpoint
+<img width="1366" height="768" alt="WhatsApp Image 2026-04-27 at 01 49 58 (1)" src="https://github.com/user-attachments/assets/b80811cb-c224-4d03-b67d-d405c1c22307" />
 
 Con la zona de interrupción delimitada, controlamos el avance del procesador alternando dos comandos clave:
 * `si` (step instruction): Ejecuta el código avanzando estrictamente una instrucción de ensamblador por vez, permitiendo analizar la carga de los registros.
 * `c` (continue): Al ubicarnos justo sobre la instrucción `int $0x10`, ejecutamos este comando para que la BIOS tome el control a velocidad normal, dibuje el carácter "H" en pantalla y se detenga inmediatamente al chocar con nuestro segundo breakpoint, listos para la siguiente vuelta del bucle.
 
-> ![IMPORTANT]
-> Impresión del primer carácter en QEMU y detención post-interrupción en GDB
+<img width="1366" height="768" alt="WhatsApp Image 2026-04-27 at 01 49 58 (2)" src="https://github.com/user-attachments/assets/43ff43a5-1a88-4753-986f-0cec3e02140c" />
 
 ---
 
