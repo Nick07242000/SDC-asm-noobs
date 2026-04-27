@@ -60,7 +60,31 @@ Al encender el equipo y seleccionar el pendrive en el menú de arranque, el proc
 
 ### Depuracion con GDB + QEMU
 
-...
+Para iniciar la sesión de depuración en frío, lanzamos el emulador utilizando el siguiente comando:
+* `qemu-system-i386 -fda main.img -boot a -s -S -monitor stdio`: Inicia la máquina virtual cargando nuestra imagen, pero congela la ejecución de la CPU antes de la primera instrucción (`-S`) y abre un servidor local (`-s`) a la espera de que nos conectemos.
+
+![QEMU iniciado en estado de pausa](Screenshot_20260427_011843.png)
+
+Desde una terminal secundaria iniciamos GDB y ejecutamos la siguiente secuencia para tomar el control del hardware emulado:
+* `target remote localhost:1234`: Establece la conexión directa con la sesión de QEMU.
+* `set architecture i8086`: Fuerza al depurador a interpretar la memoria y los registros en modo real de 16 bits, evitando errores de decodificación.
+* `break *0x7c00`: Fija un punto de interrupción exactamente en la dirección física donde la BIOS carga el MBR.
+* `continue`: Permite que la BIOS ejecute su rutina de inicio normal y nos devuelva el control al llegar a nuestro código.
+* `info registers`: Imprime el estado interno del procesador. Aquí confirmamos que el registro `eip` (Instruction Pointer) apuntaba a `0x7c00`.
+
+![Conexión de GDB, breakpoint y estado de los registros](Screenshot_20260427_012327.png)
+
+Para evitar que el depurador ingrese a leer las rutinas internas de la placa madre al momento de imprimir texto, necesitamos identificar nuestras instrucciones físicas en memoria:
+* `x/15i $pc`: Examina y traduce a lenguaje ensamblador las próximas 15 instrucciones a partir del Program Counter actual. Esto nos permitió ubicar la interrupción (`int $0x10`) en `0x7c0a`.
+* `break *0x7c0c`: Establece un segundo punto de interrupción en la instrucción inmediatamente posterior al llamado de video (`jmp 0x7c05`), creando una barrera de contención.
+
+![Inspección de memoria con decodificación de instrucciones y creación del segundo breakpoint](Screenshot_20260427_012701.png)
+
+Con la zona de interrupción delimitada, controlamos el avance del procesador alternando dos comandos clave:
+* `si` (step instruction): Ejecuta el código avanzando estrictamente una instrucción de ensamblador por vez, permitiendo analizar la carga de los registros.
+* `c` (continue): Al ubicarnos justo sobre la instrucción `int $0x10`, ejecutamos este comando para que la BIOS tome el control a velocidad normal, dibuje el carácter "H" en pantalla y se detenga inmediatamente al chocar con nuestro segundo breakpoint, listos para la siguiente vuelta del bucle.
+
+![Impresión del primer carácter en QEMU y detención post-interrupción en GDB](Screenshot_20260427_013012.png)
 
 ---
 
