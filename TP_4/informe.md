@@ -65,19 +65,58 @@ Entre las cosas que pueden realizar encontramos que pueden interceptar syscalls,
 
 > ¿Qué funciones tiene disponible un programa y un módulo?
 
-...
+Un programa en espacio de usuario utiliza funciones de bibliotecas (libc, pthread, etc), realiza llamadas al sistema (read, write, fork, socket), posee memoria virtual aislada y tienepermisos restringidos.
+
+Este no tiene acceso directo al hardware.
+
+Por otro lado un módulo del kernel puede acceder directamente al hardware, manipular memoria del kernel, registrar drivers, interceptar llamadas y manejar interrupciones.
+
+Este tiene privilegios totales.
 
 > Espacio de usuario o espacio del kernel.
 
-...
+El espacio de usuario es donde se ejecutan aplicaciones, shells, navegadores y programas comunes.
+
+Se caracteriza por su acceso restringido, aislamiento entre procesos y produce errores menos críticos.
+
+Son las aplicaciones que conocemos como Firefox, Bash, VSCode, etc
+
+El espacio del kernel es donde se ejecuta el kernel y sus módulos.
+
+Se caracteriza por su acceso completo al hardware, posee máxima prioridad, y si produce un error puede colgar todo el sistema.
+
+Por ejemplo el scheduler, los drivers, el sistema de memoria y el filesystem.
 
 > Espacio de datos.
 
-...
+El espacio de datos de un proceso contiene sus variables globales, sus variables estáticas, su heap y su stack.
+
+Se divide típicamente en Text (que es el código ejecutable), Data (las variables inicializadas), BSS (las variables no inicializadas), Heap	(la memoria dinámica) y el Stack (las variables locales y las llamadas).
 
 > Drivers. Investigar contenido de /dev.
 
-...
+Un driver es software que permite al sistema operativo comunicarse con hardware.
+
+Tenemos drivers para el teclado, el disco, la placa de red, la GPU y los puertos USB.
+
+En Linux muchos drivers son módulos del kernel (.ko).
+
+Con respecto a `/dev` Linux lo utiliza para representar dispositivos como archivos.
+
+La idea central de Unix es que todo es un archivo.
+
+Asi por ejemplo tenemos:
+
+| Archivo        | Función                  |
+| -------------- | ------------------------ |
+| `/dev/sda`     | disco duro               |
+| `/dev/tty`     | terminal                 |
+| `/dev/null`    | descarta datos           |
+| `/dev/zero`    | genera ceros             |
+| `/dev/random`  | números aleatorios       |
+| `/dev/urandom` | números pseudoaleatorios |
+| `/dev/input/*` | dispositivos de entrada  |
+| `/dev/snd/*`   | audio                    |
 
 ### Modulos
 
