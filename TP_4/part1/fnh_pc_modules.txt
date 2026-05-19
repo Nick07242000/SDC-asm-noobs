@@ -1,0 +1,94 @@
+Module                  Size  Used by
+rfcomm                102400  4
+cmac                   12288  3
+algif_hash             12288  1
+algif_skcipher         12288  1
+af_alg                 32768  6 algif_hash,algif_skcipher
+bnep                   32768  2
+nvidia_uvm           1802240  2
+binfmt_misc            24576  1
+nls_iso8859_1          12288  1
+nvidia_drm             94208  8
+nvidia_modeset       1314816  12 nvidia_drm
+nvidia              56934400  696 nvidia_uvm,nvidia_modeset
+snd_hda_codec_realtek   208896  1
+snd_hda_codec_generic   122880  1 snd_hda_codec_realtek
+snd_hda_codec_hdmi     94208  1
+snd_hda_intel          61440  4
+snd_intel_dspcfg       36864  1 snd_hda_intel
+snd_intel_sdw_acpi     16384  1 snd_intel_dspcfg
+intel_rapl_msr         20480  0
+snd_hda_codec         204800  4 snd_hda_codec_generic,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec_realtek
+intel_rapl_common      40960  1 intel_rapl_msr
+snd_usb_audio         516096  3
+snd_hda_core          139264  5 snd_hda_codec_generic,snd_hda_codec_hdmi,snd_hda_intel,snd_hda_codec,snd_hda_codec_realtek
+btusb                  81920  0
+snd_usbmidi_lib        57344  1 snd_usb_audio
+snd_ump                45056  1 snd_usb_audio
+btrtl                  32768  1 btusb
+snd_hwdep              20480  2 snd_usb_audio,snd_hda_codec
+btintel                57344  1 btusb
+edac_mce_amd           28672  0
+mc                     81920  1 snd_usb_audio
+snd_seq_midi           24576  0
+snd_seq_midi_event     16384  1 snd_seq_midi
+kvm_amd               212992  0
+snd_pcm               192512  6 snd_hda_codec_hdmi,snd_hda_intel,snd_usb_audio,snd_hda_codec,snd_hda_core
+kvm                  1413120  1 kvm_amd
+snd_rawmidi            57344  3 snd_seq_midi,snd_usbmidi_lib,snd_ump
+btbcm                  24576  1 btusb
+joydev                 32768  0
+btmtk                  12288  1 btusb
+input_leds             12288  0
+snd_seq               122880  2 snd_seq_midi,snd_seq_midi_event
+bluetooth            1044480  34 btrtl,btmtk,btintel,btbcm,bnep,btusb,rfcomm
+irqbypass              12288  1 kvm
+ecdh_generic           16384  2 bluetooth
+crct10dif_pclmul       12288  1
+video                  77824  1 nvidia_modeset
+snd_seq_device         16384  4 snd_seq,snd_seq_midi,snd_ump,snd_rawmidi
+snd_timer              49152  2 snd_seq,snd_pcm
+polyval_clmulni        12288  0
+ecc                    45056  1 ecdh_generic
+snd                   143360  27 snd_hda_codec_generic,snd_seq,snd_seq_device,snd_hda_codec_hdmi,snd_hwdep,snd_hda_intel,snd_usb_audio,snd_usbmidi_lib,snd_hda_codec,snd_hda_codec_realtek,snd_timer,snd_ump,snd_pcm,snd_rawmidi
+polyval_generic        12288  1 polyval_clmulni
+ghash_clmulni_intel    16384  0
+sha256_ssse3           32768  0
+soundcore              16384  1 snd
+sha1_ssse3             32768  0
+aesni_intel           356352  4
+k10temp                16384  0
+ccp                   143360  1 kvm_amd
+crypto_simd            16384  1 aesni_intel
+wmi_bmof               12288  0
+cryptd                 24576  3 crypto_simd,ghash_clmulni_intel
+rapl                   20480  0
+mac_hid                12288  0
+sch_fq_codel           24576  2
+msr                    12288  0
+parport_pc             53248  0
+ppdev                  24576  0
+lp                     28672  0
+parport                73728  3 parport_pc,lp,ppdev
+efi_pstore             12288  0
+ip_tables              32768  0
+x_tables               65536  1 ip_tables
+autofs4                57344  2
+hid_generic            12288  0
+ucsi_ccg               24576  0
+typec_ucsi             61440  1 ucsi_ccg
+usbhid                 77824  0
+hid                   180224  2 usbhid,hid_generic
+typec                 106496  1 typec_ucsi
+crc32_pclmul           12288  0
+i2c_nvidia_gpu         12288  0
+i2c_piix4              32768  0
+r8169                 118784  0
+i2c_ccgx_ucsi          12288  1 i2c_nvidia_gpu
+ahci                   49152  4
+realtek                36864  1
+xhci_pci               24576  0
+libahci                53248  1 ahci
+xhci_pci_renesas       20480  1 xhci_pci
+wmi                    28672  2 video,wmi_bmof
+gpio_amdpt             16384  0
