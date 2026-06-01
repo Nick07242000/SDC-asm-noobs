@@ -77,7 +77,7 @@ def animate(i):
             ax.plot(x_data, y_data, marker='o', linestyle='-', color=color)
             
             # Dynamic labels updated to English
-            title = "Signal 1 (Periodic Wave)" if current_channel == 0 else "Signal 2 (Random)"
+            title = "Signal 1 (Linear Wave)" if current_channel == 0 else "Signal 2 (Random)"
             ax.set_title(title)
             ax.set_xlabel("Time (Seconds / Counter)")
             ax.set_ylabel("Value (Units)")
