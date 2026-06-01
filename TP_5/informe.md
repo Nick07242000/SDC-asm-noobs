@@ -460,3 +460,11 @@ Debido a que la aplicación utiliza la biblioteca `Matplotlib`, es necesario ins
 ```bash
 sudo apt install python3-matplotlib
 ```
+
+Al ejecutar podemos observar la visualizacion de la señal lineal:
+
+<img width="840" height="658" alt="Screenshot from 2026-06-01 19-05-38" src="https://github.com/user-attachments/assets/1062e5cb-ad44-4f43-8c98-5d96033b0a3b" />
+
+E incluso podemos cambiar para visualizar la señal aleatoria:
+
+<img width="840" height="658" alt="Screenshot from 2026-06-01 19-06-00" src="https://github.com/user-attachments/assets/ab14dc4b-9c63-4332-960a-c8e827acdbfd" />
