@@ -431,7 +431,7 @@ El resultado final fue un Character Device Driver completamente funcional capaz 
 
 ---
 
-## Aplicación y Visualización
+### Aplicación y Visualización
 
 Se desarrolló una aplicación en Python para interactuar con el dispositivo `/dev/asmn_driver` y visualizar en tiempo real las señales generadas por el Character Device Driver.
 
@@ -443,7 +443,7 @@ La lectura de datos se realiza abriendo periódicamente el dispositivo con `read
 
 Mediante la función `FuncAnimation`, la aplicación consulta el driver cada 500 ms y actualiza automáticamente el gráfico, sin repetir muestras.
 
-### Ejecución de app.py
+#### Ejecución de app.py
 
 Para la ejecucion de `app.py` utilizamos `make run`.
 Al ejecutar este comando se realizan automáticamente las siguientes acciones:
