@@ -324,11 +324,11 @@ static ssize_t asmn_write(struct file *file, const char __user *buf, size_t len,
 
 Aqui logramos una comunicación bidireccional entre user-space y kernel.
 
-Ahora con echo `0 > /dev/tp_driver` podemos seleccionar el canal cero y con `echo 1 > /dev/tp_driver` podemos seleccionar el canal uno.
+Ahora con `echo 0 | sudo tee /dev/asmn_driver` podemos seleccionar el canal cero y con `echo 1 | sudo tee /dev/asmn_driver` podemos seleccionar el canal uno.
 
 <img width="503" height="349" alt="Screenshot from 2026-05-29 21-30-54" src="https://github.com/user-attachments/assets/51f9f2cb-f86b-4f5e-88be-a9a6d9763c2e" />
 
-#### Generacion Automatica de \dev
+#### Generacion Automatica de /dev
 
 Hasta ahora el dispositivo existía dentro del kernel, pero todavía no aparecía automáticamente dentro de /dev, esto lo realizabamos de forma manual en el script:
 
@@ -428,3 +428,35 @@ Con este ajuste al ejecutar podemos ver como se genera automaticamente el archiv
 Asi se integraron todas las partes desarrolladas, el módulo del kernel, el registro del device, las operaciones del dispositivo, el timer, la generación de señales, la lectura y escritura, y la creación automática de `/dev`.
 
 El resultado final fue un Character Device Driver completamente funcional capaz de generar dos señales, muestrearlas periódicamente, permitir selección dinámica de canal y entregar datos a aplicaciones de usuario mediante `/dev/asmn_driver`.
+
+---
+
+## Aplicación y Visualización
+
+Se desarrolló una aplicación en Python para interactuar con el dispositivo `/dev/asmn_driver` y visualizar en tiempo real las señales generadas por el Character Device Driver.
+
+Para la interfaz gráfica se utilizó la biblioteca `Matplotlib`, la cual permite seleccionar una de las dos señales disponibles mediante botones y representar su evolución en función del tiempo.
+
+Cuando el usuario presiona uno de los botones, se invoca a la función `set_channel()`, que escribe el valor correspondiente (0 o 1) en el archivo `/dev/asmn_driver`.Esto provoca que el driver cambie el canal de medición seleccionado y reinicia los datos almacenados para comenzar una nueva visualización.
+
+La lectura de datos se realiza abriendo periódicamente el dispositivo con `read_device()` y obteniendo una cadena con el formato `contador:valor`, donde el contador representa el tiempo transcurrido y el valor corresponde a la medición de la señal seleccionada.
+
+Mediante la función `FuncAnimation`, la aplicación consulta el driver cada 500 ms y actualiza automáticamente el gráfico, sin repetir muestras.
+
+### Ejecución de app.py
+
+Para la ejecucion de `app.py` utilizamos `make run`.
+Al ejecutar este comando se realizan automáticamente las siguientes acciones:
+
+- Se compila el módulo del kernel.
+- Se elimina una versión previa del módulo (si estaba cargada).
+- Se carga el módulo mediante `insmod`.
+- Se ejecuta la aplicación Python.
+- La aplicación comienza a comunicarse con el dispositivo /dev/asmn_driver y muestra las señales en tiempo real.
+
+> [!NOTE]
+
+Debido a que la aplicación utiliza la biblioteca `Matplotlib`, es necesario instalarla previamente:
+```bash
+sudo apt install python3-matplotlib
+```
