@@ -468,3 +468,166 @@ Al ejecutar podemos observar la visualizacion de la señal lineal:
 E incluso podemos cambiar para visualizar la señal aleatoria:
 
 <img width="840" height="658" alt="Screenshot from 2026-06-01 19-06-00" src="https://github.com/user-attachments/assets/ab14dc4b-9c63-4332-960a-c8e827acdbfd" />
+
+---
+
+### Compilación Cruzada
+ 
+Para esta etapa de la experiencia el foco es la compilacion cruzada del driver para la ejecucion de la misma desde una Raspberry PI.
+
+Todo el código es escrito en la PC host, y con la ayuda de un Makefile compilamos el código apuntando a la arquitectura de la Raspberry.
+
+Una vez generados los binarios estos seran enviados a la Raspberry Pi a través de SSH.
+
+> [!IMPORTANT]
+> SVG de la arquitectura aca
+
+Vamos a utilizar QEMU para emular una Raspberry PI ante la falta del hardware fisico real. Para esto vamos a utilizar los siguientes componentes:
+
+- Imagen del SO: Raspberry Pi OS Lite arm64 oficial. Usamos la versión Lite porque no necesitamos solo SSH, Python y el kernel.
+- Máquina QEMU: `-machine raspi3b` con CPU Cortex-A72.
+- Kernel y DTB: Extraidos directamente de la partición boot del .img descargado.
+- Cross-toolchain: `gcc-aarch64-linux-gnu` en el host. Para ARM64 usamos el toolchain `aarch64-linux-gnu` que corre en el host x86-64 pero produce binarios ARM64.
+- Kernel headers: Repo oficial `raspberrypi/linux` rama `rpi-6.6.y` necesarios para compilar el módulo `.ko` contra el mismo kernel que corre la VM.
+
+#### Dependencias
+
+Para lograr esta etapa requerimos de:
+
+```bash
+sudo apt install -y \
+  qemu-system-arm \
+  gcc-aarch64-linux-gnu \
+  build-essential \
+  bc bison flex libssl-dev libelf-dev \
+  libncurses-dev kmod
+```
+
+#### Imagen 
+
+Descargamos la imagen Lite arm64:
+
+```bash
+wget https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2025-05-13/2025-05-13-raspios-bookworm-arm64-lite.img.xz
+xz -d 2025-05-13-raspios-bookworm-arm64-lite.img.xz
+```
+
+Agrandamos la imagen para tener espacio de trabajo:
+
+```bash
+qemu-img resize -f raw 2025-05-13-raspios-bookworm-arm64-lite.img +2G
+```
+
+Extraemos kernel8.img y DTB de la partición boot:
+
+```bash
+sudo losetup -P -f --show 2025-05-13-raspios-bookworm-arm64-lite.img
+mkdir -p mnt/boot
+sudo mount /dev/loop20p1 mnt/boot
+```
+
+Luego de ejecutar esos comandos tenemos estos archivos disponibles dentro de `mnt/boot`, los cuales extraemos:
+
+```bash
+cp mnt/boot/kernel8.img .
+cp mnt/boot/bcm2710-rpi-3-b-plus.dtb .
+```
+
+Habilitamos SSH en primer boot (un archivo vacío activa el servicio):
+
+```bash
+sudo touch mnt/boot/ssh
+```
+
+Creamos un usuario `asm_noobs` con contraseña `1234`:
+
+```bash
+echo "asm_noobs:$(echo '1234' | openssl passwd -6 -stdin)" | sudo tee mnt/boot/userconf.txt
+```
+
+Y desmontamos la imagen despues de extraer lo necesario:
+
+```bash
+sudo umount mnt/boot
+sudo losetup -D /dev/loop20
+```
+
+En resumen se extrae `kernel8.img` y `bcm2710-rpi-3-b-plus.dtb` de la partición boot y se habilita SSH creando el archivo `ssh` y el archivo `userconf.txt` con el hash de la contraseña.
+
+#### Kernel Headers
+
+Procedemos a obtener los kernel headers del host para cross-compilar.
+
+Clonamos rama exacta del kernel que usa Bookworm 2025:
+
+```bash
+git clone --depth=1 --branch rpi-6.6.y https://github.com/raspberrypi/linux
+cd linux
+```
+
+Preparamos el árbol para compilar módulos externos:
+ 
+```bash
+ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make bcm2711_defconfig
+ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make -j$(nproc) Image modules dtbs
+cd ..
+```
+
+Luego de esto dejamos el entorno perfectamente preparado para compilar controladores externos.
+
+#### Cross Compile CDD
+
+Generamos un Makefile del driver que apunta al árbol de kernel clonado:
+
+```makefile
+ARCH         := arm64
+CROSS_COMPILE := aarch64-linux-gnu-
+KDIR         := $(PWD)/linux   # ruta al repo clonado
+
+obj-m += mi_driver.o
+
+all:
+	make -C $(KDIR) M=$(PWD) \
+	  ARCH=$(ARCH) \
+	  CROSS_COMPILE=$(CROSS_COMPILE) \
+	  modules
+
+clean:
+	make -C $(KDIR) M=$(PWD) \
+	  ARCH=$(ARCH) \
+	  CROSS_COMPILE=$(CROSS_COMPILE) \
+	  clean
+```
+
+Al ejecutarlo con `make` generamos nuestro driver cross compilado para arm64 (raspberry), que verificamos:
+
+> [!IMPORTANT]
+> Imagenes de la compilacion y verificacion.
+
+#### QEMU VM
+
+Procedemos a levantar QEMU con el comando:
+
+```bash
+qemu-system-aarch64 \
+  -machine raspi3b \
+  -cpu cortex-a53 \
+  -m 1G -smp 4 \
+  -kernel kernel8.img \
+  -dtb bcm2710-rpi-3-b-plus.dtb \
+  -drive format=raw,file=2025-05-13-raspios-bookworm-arm64-lite.img \
+  -append "rw earlyprintk loglevel=8 console=ttyAMA1,115200 \
+           root=/dev/mmcblk0p2 rootfstype=ext4 \
+           dwc_otg.lpm_enable=0 rootdelay=1 systemd.log_level=debug \
+           systemd.log_target=console systemd.mask=userconfig.service" \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device usb-net,netdev=net0 \
+  -nographic
+```
+
+Al correrla encontramos que el sistema quedaba colgado en `userconfig.service` y `SSH` rechazaba la conexión.
+
+Encontramos una serie de problemas:
+- El servicio de primer arranque de Raspberry Pi OS que procesa `userconf.txt` se cuelga indefinidamente bajo emulación QEMU. Esto se debe a que las utilidades PAM/shadow hacen syscalls que el emulador `aarch64` no maneja correctamente (especialmente llamadas relacionadas con entropía/random).
+- El comando original con pipe no producía un hash `$6$` válido cuando se ejecutaba dentro de subshells. El hash resultante carecía del prefijo de algoritmo.
+- 
