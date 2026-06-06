@@ -2,3 +2,5 @@
 *.o
 *.img
 *.efi
+*linux
+*.config
