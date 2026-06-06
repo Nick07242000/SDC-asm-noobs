@@ -479,8 +479,7 @@ Todo el código es escrito en la PC host, y con la ayuda de un Makefile compilam
 
 Una vez generados los binarios estos seran enviados a la Raspberry Pi a través de SSH.
 
-> [!IMPORTANT]
-> SVG de la arquitectura aca
+<img width="1360" height="1080" alt="qemu_rpi_cdd_workflow" src="https://github.com/user-attachments/assets/e79beec8-74e1-4956-9c15-33bf7761c435" />
 
 Vamos a utilizar QEMU para emular una Raspberry PI ante la falta del hardware fisico real. Para esto vamos a utilizar los siguientes componentes:
 
@@ -578,8 +577,9 @@ Para esto ejecutamos una solucion disponible en `userconfig.sh` que:
 
 Solucionado eso logramos levantar la VM y conectarnos por SSH:
 
-> [!IMPORTANT]
-> Imagenes de conexion ssh.
+<img width="1262" height="902" alt="Screenshot from 2026-06-06 01-50-08" src="https://github.com/user-attachments/assets/46023625-383c-407d-a2ed-caaca2cf8204" />
+<img width="1262" height="902" alt="Screenshot from 2026-06-06 01-50-26" src="https://github.com/user-attachments/assets/c3a860eb-48d2-4460-b126-5f9abd9fe043" />
+<img width="742" height="324" alt="Screenshot from 2026-06-03 22-10-56" src="https://github.com/user-attachments/assets/20305636-0944-4e65-89dc-1ccb25da4b19" />
 
 #### Compilacion Cruzada
 
@@ -609,8 +609,7 @@ Por lo tanto no era exactamente el mismo kernel, no coincidían los paquetes Deb
 
 Entonces comenzamos a extraer información directamente desde la Raspberry.
 
-> [!IMPORTANT]
-> imagen de la info del kernel
+<img width="1698" height="141" alt="Screenshot from 2026-06-05 22-33-18" src="https://github.com/user-attachments/assets/588ec5fa-84af-489b-a219-e8eac349b3f9" />
 
 Esto nos dio el objetivo exacto a reproducir.
 
@@ -710,8 +709,7 @@ Ahora los ejecutables podían correr en Ubuntu.
 
 Al ejecutar `make` finalmente el modulo compilo y genero `asmn_driver.ko` que procedimos a verificar que la version coincida.
 
-> [!IMPORTANT]
-> imagen de la validacio de ver
+<img width="2090" height="1313" alt="Screenshot from 2026-06-05 21-40-38" src="https://github.com/user-attachments/assets/69581cb1-6440-4a79-a0da-2144927d1fad" />
 
 Entonces para compilar utilizamos:
 - Desde la Raspberry:
@@ -734,22 +732,21 @@ Ahora si podemos transferir los archivos a raspberry para ejecutar el CDD y la a
 
 Transferimos el driver compilado a QEMU:
 
-> [!IMPORTANT]
-> transferencia .ko
+<img width="904" height="107" alt="Screenshot from 2026-06-05 21-39-28" src="https://github.com/user-attachments/assets/b2051b90-afd4-4138-859b-d2b25f114306" />
 
 Luego instalamos el mismo y verificamos que este generando "lecturas":
 
-> [!IMPORTANT]
-> insmod
+<img width="1165" height="893" alt="Screenshot from 2026-06-05 21-41-12" src="https://github.com/user-attachments/assets/49b5727c-cfee-4637-a67a-d500e9afc5f3" />
 
 Para visualizar las lecturas generamos un servidor que tomara las lecturas del CDD y las convirtiera en un sitio con human readable user interface.
 
 Al estar funcionando el CDD transferimos el aplicativo web escrito en python y levantamos el servidor dentro de QEMU:
 
-> [!IMPORTANT]
-> transfer and run py
+<img width="881" height="104" alt="Screenshot from 2026-06-06 00-52-16" src="https://github.com/user-attachments/assets/9d2c9997-0a90-479e-bc9b-0fa6e9320bbf" />
+<img width="312" height="37" alt="Screenshot from 2026-06-06 00-52-26" src="https://github.com/user-attachments/assets/c52f8705-a197-471a-8f73-76ba478b6006" />
 
 Al servidor nos pudimos conectar desde nuestro host al levantar la VM con `hostfwd=tcp::8080-:8080`:
 
-> [!IMPORTANT]
-> imagenes app web
+<img width="1318" height="879" alt="Screenshot from 2026-06-06 00-52-50" src="https://github.com/user-attachments/assets/fc900850-0306-455d-8d97-1e0f6fe6e0a8" />
+<img width="1318" height="879" alt="Screenshot from 2026-06-06 00-54-01" src="https://github.com/user-attachments/assets/70c68cc3-3207-430c-bab9-94eab6eac5c0" />
+
