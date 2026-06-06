@@ -555,7 +555,7 @@ qemu-system-aarch64 \
            root=/dev/mmcblk0p2 rootfstype=ext4 \
            dwc_otg.lpm_enable=0 rootdelay=1 systemd.log_level=debug \
            systemd.log_target=console systemd.mask=userconfig.service" \
-  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:8080 \
   -device usb-net,netdev=net0 \
   -nographic
 ```
@@ -730,9 +730,26 @@ De esta forma se obtuvo un entorno que conservaba exactamente el ABI del kernel 
 
 #### Ejecucion
 
-Ahora si podemos transferir los archivos con:
+Ahora si podemos transferir los archivos a raspberry para ejecutar el CDD y la aplicacion de usuario.
 
-```bash
-scp -P 2222 asmn_driver.ko  pi@localhost:/home/pi/
-scp -P 2222 web_app.py  pi@localhost:/home/pi/
-```
+Transferimos el driver compilado a QEMU:
+
+> [!IMPORTANT]
+> transferencia .ko
+
+Luego instalamos el mismo y verificamos que este generando "lecturas":
+
+> [!IMPORTANT]
+> insmod
+
+Para visualizar las lecturas generamos un servidor que tomara las lecturas del CDD y las convirtiera en un sitio con human readable user interface.
+
+Al estar funcionando el CDD transferimos el aplicativo web escrito en python y levantamos el servidor dentro de QEMU:
+
+> [!IMPORTANT]
+> transfer and run py
+
+Al servidor nos pudimos conectar desde nuestro host al levantar la VM con `hostfwd=tcp::8080-:8080`:
+
+> [!IMPORTANT]
+> imagenes app web
