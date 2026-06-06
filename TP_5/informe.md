@@ -471,7 +471,7 @@ E incluso podemos cambiar para visualizar la señal aleatoria:
 
 ---
 
-### Compilación Cruzada
+### Raspberry Pi
  
 Para esta etapa de la experiencia el foco es la compilacion cruzada del driver para la ejecucion de la misma desde una Raspberry PI.
 
@@ -488,24 +488,11 @@ Vamos a utilizar QEMU para emular una Raspberry PI ante la falta del hardware fi
 - Máquina QEMU: `-machine raspi3b` con CPU Cortex-A72.
 - Kernel y DTB: Extraidos directamente de la partición boot del .img descargado.
 - Cross-toolchain: `gcc-aarch64-linux-gnu` en el host. Para ARM64 usamos el toolchain `aarch64-linux-gnu` que corre en el host x86-64 pero produce binarios ARM64.
-- Kernel headers: Repo oficial `raspberrypi/linux` rama `rpi-6.6.y` necesarios para compilar el módulo `.ko` contra el mismo kernel que corre la VM.
+- Kernel headers: Repo oficial `raspberrypi/linux` rama `rpi-6.12.y` necesarios para compilar el módulo `.ko` contra el mismo kernel que corre la VM.
 
-#### Dependencias
+#### QEMU VM 
 
-Para lograr esta etapa requerimos de:
-
-```bash
-sudo apt install -y \
-  qemu-system-arm \
-  gcc-aarch64-linux-gnu \
-  build-essential \
-  bc bison flex libssl-dev libelf-dev \
-  libncurses-dev kmod
-```
-
-#### Imagen 
-
-Descargamos la imagen Lite arm64:
+Lo primero que debiamos hacer era montar una QEMU con Raspberry Pi. Para eso descargamos la imagen Lite arm64:
 
 ```bash
 wget https://downloads.raspberrypi.com/raspios_lite_arm64/images/raspios_lite_arm64-2025-05-13/2025-05-13-raspios-bookworm-arm64-lite.img.xz
@@ -554,58 +541,6 @@ sudo losetup -D /dev/loop20
 
 En resumen se extrae `kernel8.img` y `bcm2710-rpi-3-b-plus.dtb` de la partición boot y se habilita SSH creando el archivo `ssh` y el archivo `userconf.txt` con el hash de la contraseña.
 
-#### Kernel Headers
-
-Procedemos a obtener los kernel headers del host para cross-compilar.
-
-Clonamos rama exacta del kernel que usa Bookworm 2025:
-
-```bash
-git clone --depth=1 --branch rpi-6.6.y https://github.com/raspberrypi/linux
-cd linux
-```
-
-Preparamos el árbol para compilar módulos externos:
- 
-```bash
-ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make bcm2711_defconfig
-ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- make -j$(nproc) Image modules dtbs
-cd ..
-```
-
-Luego de esto dejamos el entorno perfectamente preparado para compilar controladores externos.
-
-#### Cross Compile CDD
-
-Generamos un Makefile del driver que apunta al árbol de kernel clonado:
-
-```makefile
-ARCH         := arm64
-CROSS_COMPILE := aarch64-linux-gnu-
-KDIR         := $(PWD)/linux   # ruta al repo clonado
-
-obj-m += mi_driver.o
-
-all:
-	make -C $(KDIR) M=$(PWD) \
-	  ARCH=$(ARCH) \
-	  CROSS_COMPILE=$(CROSS_COMPILE) \
-	  modules
-
-clean:
-	make -C $(KDIR) M=$(PWD) \
-	  ARCH=$(ARCH) \
-	  CROSS_COMPILE=$(CROSS_COMPILE) \
-	  clean
-```
-
-Al ejecutarlo con `make` generamos nuestro driver cross compilado para arm64 (raspberry), que verificamos:
-
-> [!IMPORTANT]
-> Imagenes de la compilacion y verificacion.
-
-#### QEMU VM
-
 Procedemos a levantar QEMU con el comando:
 
 ```bash
@@ -630,4 +565,174 @@ Al correrla encontramos que el sistema quedaba colgado en `userconfig.service` y
 Encontramos una serie de problemas:
 - El servicio de primer arranque de Raspberry Pi OS que procesa `userconf.txt` se cuelga indefinidamente bajo emulación QEMU. Esto se debe a que las utilidades PAM/shadow hacen syscalls que el emulador `aarch64` no maneja correctamente (especialmente llamadas relacionadas con entropía/random).
 - El comando original con pipe no producía un hash `$6$` válido cuando se ejecutaba dentro de subshells. El hash resultante carecía del prefijo de algoritmo.
-- 
+- Al hacer `chown` desde el host el directorio quedó asignado al usuario del host en lugar del usuario de la imagen. Aunque comparten uid el nombre visible causaba confusión y PAM rechazaba el login.
+
+Para esto ejecutamos una solucion disponible en `userconfig.sh` que:
+- Monta la imagen
+- Habilita SSH
+- Deshabilita userconfig.service
+- Crea el usuario directamente en rootfs
+- Genera hash correcto y escribe en shadow
+- Corrige ownership del home
+- Desmonta limpiamente
+
+Solucionado eso logramos levantar la VM y conectarnos por SSH:
+
+> [!IMPORTANT]
+> Imagenes de conexion ssh.
+
+#### Compilacion Cruzada
+
+Ahora el objetivo es compilar en Ubuntu x86_64 un módulo de kernel `asmn_driver.ko` que pudiera cargarse correctamente en una Raspberry Pi que ejecutaba exactamente:
+
+> Linux version 6.12.25+rpt-rpi-v8
+> #1 SMP PREEMPT Debian 1:6.12.25-1+rpt1 (2025-04-30)
+
+El desafío principal era que el módulo debía ser compatible con ese kernel específico incluyendo:
+- misma versión (UTS_RELEASE)
+- misma configuración (.config)
+- mismos símbolos exportados (Module.symvers)
+- mismas opciones de compilación
+- misma variante Raspberry Pi (rpt-rpi-v8)
+
+Inicialmente intentamos clonar el repositorio oficial de Raspberry Pi:
+
+```bash
+git clone --depth=1 --branch rpi-6.12.y https://github.com/raspberrypi/linux.git
+```
+
+La idea era utilizar directamente el árbol fuente oficial pero rápidamente encontramos un problema.
+
+El árbol obtenido generaba `#define UTS_RELEASE "6.12.92-v8+"` mientras que el kernel real de la Raspberry ejecutaba `#define UTS_RELEASE "6.12.25+rpt-rpi-v8"`.
+
+Por lo tanto no era exactamente el mismo kernel, no coincidían los paquetes Debian de Raspberry Pi y existía riesgo de incompatibilidad de símbolos.
+
+Entonces comenzamos a extraer información directamente desde la Raspberry.
+
+> [!IMPORTANT]
+> imagen de la info del kernel
+
+Esto nos dio el objetivo exacto a reproducir.
+
+Entonces procedimos a copiar los paquetes instalados en:
+
+> /usr/src/linux-headers-6.12.25+rpt-common-rpi
+> /usr/src/linux-headers-6.12.25+rpt-rpi-v8
+> /lib/modules/6.12.25+rpt-rpi-v8
+
+Generando esta estructura de archivos:
+
+```txt
+rpi-workspace/
+├── 6.12.25+rpt-rpi-v8
+├── linux-headers-6.12.25+rpt-common-rpi
+└── linux-headers-6.12.25+rpt-rpi-v8
+```
+
+Realizamos asi un makefile para compilar con esta estructura:
+
+```makefile
+ARCH          := arm64
+CROSS_COMPILE := aarch64-linux-gnu-
+KDIR          := $(HOME)/rpi-workspace/linux-headers-6.12.25+rpt-rpi-v8
+
+obj-m += asmn_driver.o
+
+all:
+	make -C $(KDIR) M=$(PWD) \
+	  ARCH=$(ARCH) \
+	  CROSS_COMPILE=$(CROSS_COMPILE) \
+	  modules
+
+clean:
+	make -C $(KDIR) M=$(PWD) \
+	  ARCH=$(ARCH) \
+	  CROSS_COMPILE=$(CROSS_COMPILE) \
+	  clean
+```
+
+Pero al intentar compilar obtuvimos `No rule to make target /home/hive/rpi-workspace/headers/common/Makefile`.
+
+Al inspeccionar con `cat linux-headers-6.12.25+rpt-rpi-v8/Makefile` obtuvimos `include /usr/src/linux-headers-6.12.25+rpt-common-rpi/Makefile`.
+
+El paquete de headers estaba diseñado para vivir en `/usr/src/` pero nosotros lo habiamos copiado a `~/rpi-workspace/` por lo que todas las referencias absolutas quedaron inválidas.
+
+Entonces se modificó el Makefile para apuntar a la copia local `include /home/hive/rpi-workspace/linux-headers-6.12.25+rpt-common-rpi/Makefile`.
+
+Procedimos a realizar lo mismo cada vez que obteniamos un error por una referencia de ese tipo, reemplazando la referencia del path de Raspberry por nuestra estructura casera.
+
+Luego al intentar compilar de nuevo encontramos `Kernel configuration is invalid. include/generated/autoconf.h or include/config/auto.conf are missing.`
+
+Verificamos `ls include/config/auto.conf` y `ls include/generated/autoconf.h` observamos que algunos archivos estaban presentes en `linux-headers-6.12.25+rpt-rpi-v8` pero no en `6.12.25+rpt-rpi-v8/build`.
+
+Decidimos copiarlos para reparar la estructura:
+
+```bash
+cp -r \
+linux-headers-6.12.25+rpt-rpi-v8/include/generated \
+6.12.25+rpt-rpi-v8/build/include/
+
+cp -r \
+linux-headers-6.12.25+rpt-rpi-v8/include/config \
+6.12.25+rpt-rpi-v8/build/include/
+```
+
+Luego aparecio `as: unrecognized option '-EL'` que al inspeccionar `which as` obtuvimos `/usr/bin/as` que correspondía al assembler x86_64 mientras que `which aarch64-linux-gnu-as` mostraba `/usr/bin/aarch64-linux-gnu-as`.
+
+La compilación estaba usando GCC cruzado `aarch64-linux-gnu-gcc-12` pero éste estaba invocando incorrectamente el assembler nativo.
+
+Se reinstalo el compilador cruzado con:
+
+```bash
+sudo apt install --reinstall \
+    gcc-12-aarch64-linux-gnu \
+    binutils-aarch64-linux-gnu
+```
+
+Donde desaparecio el error `-EL` pero ahora aparecio el error `scripts/basic/fixdep: not found`.
+
+El archivo existia buscando con `ls scripts/basic/fixdep` pero haciendo `file scripts/basic/fixdep` vimos `ELF 64-bit LSB executable, ARM aarch64`.
+
+Los headers copiados desde la Raspberry contenían binarios host compilados para ARM64. Ubuntu intentaba ejecutarlos y fallaba.
+
+Intentando ejecutarlo manualmente `./fixdep` aparecio `Exec format error` confirmado la teoria.
+
+El repositorio Linux clonado previamente sí contenía `scripts/basic/fixdep` y `scripts/mod/modpost` compilados para x86_64.
+
+Verificamos `file scripts/basic/fixdep` que resulto en `ELF 64-bit LSB executable, x86-64`, entonces decidimos copiar esos archivos:
+
+```bash
+cp linux/scripts/basic/fixdep linux-headers-6.12.25+rpt-rpi-v8/scripts/basic/
+cp linux/scripts/mod/modpost linux-headers-6.12.25+rpt-rpi-v8/scripts/mod/
+```
+
+Ahora los ejecutables podían correr en Ubuntu.
+
+Al ejecutar `make` finalmente el modulo compilo y genero `asmn_driver.ko` que procedimos a verificar que la version coincida.
+
+> [!IMPORTANT]
+> imagen de la validacio de ver
+
+Entonces para compilar utilizamos:
+- Desde la Raspberry:
+    - .config
+    - Module.symvers
+    - include/generated/*
+    - include/config/*
+    - UTS_RELEASE
+    - headers específicos Raspberry Pi
+- Desde el árbol Linux clonado
+    - fixdep
+    - modpost
+    - herramientas host x86_64
+
+De esta forma se obtuvo un entorno que conservaba exactamente el ABI del kernel de la Raspberry, pero que podía ejecutarse y compilar correctamente sobre Ubuntu x86_64.
+
+#### Ejecucion
+
+Ahora si podemos transferir los archivos con:
+
+```bash
+scp -P 2222 asmn_driver.ko  pi@localhost:/home/pi/
+scp -P 2222 web_app.py  pi@localhost:/home/pi/
+```

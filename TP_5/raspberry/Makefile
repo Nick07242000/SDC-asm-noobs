@@ -1,6 +1,6 @@
 ARCH          := arm64
 CROSS_COMPILE := aarch64-linux-gnu-
-KDIR          := /usr/src/linux-headers-6.12.25+rpt-rpi-v8
+KDIR 		  := $(HOME)/rpi-workspace/linux-headers-6.12.25+rpt-rpi-v8
 
 obj-m += asmn_driver.o
 
