@@ -431,6 +431,58 @@ El resultado final fue un Character Device Driver completamente funcional capaz 
 
 ---
 
+### Módulo Clipboard /proc 
+
+> Para este apartado usamos los recursos de gitlab publicado: `FuentesClipboard`, y se agregaron algunos `printk()` para analizar la lectura y escritura.
+> https://gitlab.com/sistemas-de-computacion-unc/device-drivers/-/tree/main/FuentesClipboard?ref_type=heads
+
+Para automatizar las pruebas se desarrolló del mismo modo que CDD el script `validate.sh`. En donde:
+
+- Compilamos el módulo.
+- Insertamos el módulo en el kernel.
+- Verificamos la presencia de /proc/clipboard.
+- Escribimos un mensaje en el clipboard.
+- Leemos el contenido almacenado.
+- Inspeccionamos los mensajes del kernel mediante dmesg.
+- Quitamos el módulo del kernel.
+- Limpiamos los archivos generados.
+
+#### Clipboard vs CDD
+
+A diferencia del Character Device Driver desarrollado anteriormente, este módulo no crea una entrada en /dev ni registra un dispositivo de caracteres mediante cdev. En su lugar, crea una entrada virtual dentro del sistema de archivos /proc:
+
+```c
+proc_create("clipboard", 0666, NULL, &proc_entry_fops);
+```
+
+Por este motivo utiliza la estructura `proc_ops`, recomendada en versiones modernas del kernel para entradas de /proc, en lugar de file_operations.
+
+#### Funcionamiento
+
+Durante la inicialización del módulo se reserva un buffer dinámico de tamaño `PAGE_SIZE` utilizando `vmalloc()`. Este buffer actúa de forma temporal dentro del kernel.
+
+La operación de escritura `clipboard_write()` copia información desde espacio de usuario hacia espacio de kernel mediante `copy_from_user()`, mientras que la operación de lectura `clipboard_read` devuelve el contenido almacenado utilizando `copy_to_user()`.
+
+A diferencia del CDD no implementa operaciones como:
+- open()
+- release()
+- read()
+- write()
+El módulo clipboard únicamente implementa:
+- proc_read()
+- proc_write()
+Las cuales son suficientes para la funcionalidad requerida.
+
+Finalmente, al descargar el módulo se elimina la entrada `/proc/clipboard` y se libera la memoria reservada mediante `vfree()`, evitando pérdidas de memoria dentro del kernel.
+
+<img width="636" height="330" alt="image" src="https://github.com/user-attachments/assets/ccd146f6-706f-4253-bab9-5312928f3cfb" />
+
+<img width="636" height="330" alt="image" src="https://github.com/user-attachments/assets/8b067628-9917-4506-9e81-2c4bd4e0dbb0" />
+
+<img width="636" height="453" alt="image" src="https://github.com/user-attachments/assets/d0f899fb-2571-4332-ac4a-2c6331c41064" />
+
+---
+
 ### Aplicación y Visualización
 
 Se desarrolló una aplicación en Python para interactuar con el dispositivo `/dev/asmn_driver` y visualizar en tiempo real las señales generadas por el Character Device Driver.
@@ -749,57 +801,5 @@ Al servidor nos pudimos conectar desde nuestro host al levantar la VM con `hostf
 
 <img width="1318" height="879" alt="Screenshot from 2026-06-06 00-52-50" src="https://github.com/user-attachments/assets/fc900850-0306-455d-8d97-1e0f6fe6e0a8" />
 <img width="1318" height="879" alt="Screenshot from 2026-06-06 00-54-01" src="https://github.com/user-attachments/assets/70c68cc3-3207-430c-bab9-94eab6eac5c0" />
-
----
-
-### Módulo Clipboard /proc 
-
-> Para este apartado usamos los recursos de gitlab publicado: `FuentesClipboard`, y se agregaron algunos `printk()` para analizar la lectura y escritura.
-> https://gitlab.com/sistemas-de-computacion-unc/device-drivers/-/tree/main/FuentesClipboard?ref_type=heads
-
-Para automatizar las pruebas se desarrolló del mismo modo que CDD el script `validate.sh`. En donde:
-
-- Compilamos el módulo.
-- Insertamos el módulo en el kernel.
-- Verificamos la presencia de /proc/clipboard.
-- Escribimos un mensaje en el clipboard.
-- Leemos el contenido almacenado.
-- Inspeccionamos los mensajes del kernel mediante dmesg.
-- Quitamos el módulo del kernel.
-- Limpiamos los archivos generados.
-
-#### Clipboard vs CDD
-
-A diferencia del Character Device Driver desarrollado anteriormente, este módulo no crea una entrada en /dev ni registra un dispositivo de caracteres mediante cdev. En su lugar, crea una entrada virtual dentro del sistema de archivos /proc:
-
-```c
-proc_create("clipboard", 0666, NULL, &proc_entry_fops);
-```
-
-Por este motivo utiliza la estructura `proc_ops`, recomendada en versiones modernas del kernel para entradas de /proc, en lugar de file_operations.
-
-#### Funcionamiento
-
-Durante la inicialización del módulo se reserva un buffer dinámico de tamaño `PAGE_SIZE` utilizando `vmalloc()`. Este buffer actúa de forma temporal dentro del kernel.
-
-La operación de escritura `clipboard_write()` copia información desde espacio de usuario hacia espacio de kernel mediante `copy_from_user()`, mientras que la operación de lectura `clipboard_read` devuelve el contenido almacenado utilizando `copy_to_user()`.
-
-A diferencia del CDD no implementa operaciones como:
-- open()
-- release()
-- read()
-- write()
-El módulo clipboard únicamente implementa:
-- proc_read()
-- proc_write()
-Las cuales son suficientes para la funcionalidad requerida.
-
-Finalmente, al descargar el módulo se elimina la entrada `/proc/clipboard` y se libera la memoria reservada mediante `vfree()`, evitando pérdidas de memoria dentro del kernel.
-
-<img width="636" height="330" alt="image" src="https://github.com/user-attachments/assets/ccd146f6-706f-4253-bab9-5312928f3cfb" />
-
-<img width="636" height="330" alt="image" src="https://github.com/user-attachments/assets/8b067628-9917-4506-9e81-2c4bd4e0dbb0" />
-
-<img width="636" height="453" alt="image" src="https://github.com/user-attachments/assets/d0f899fb-2571-4332-ac4a-2c6331c41064" />
 
 
