@@ -506,8 +506,6 @@ Al ejecutar este comando se realizan automáticamente las siguientes acciones:
 - Se ejecuta la aplicación Python.
 - La aplicación comienza a comunicarse con el dispositivo /dev/asmn_driver y muestra las señales en tiempo real.
 
-> [!NOTE]
-
 Debido a que la aplicación utiliza la biblioteca `Matplotlib`, es necesario instalarla previamente:
 ```bash
 sudo apt install python3-matplotlib
