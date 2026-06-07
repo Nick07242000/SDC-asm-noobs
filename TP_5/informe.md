@@ -795,3 +795,11 @@ El módulo clipboard únicamente implementa:
 Las cuales son suficientes para la funcionalidad requerida.
 
 Finalmente, al descargar el módulo se elimina la entrada `/proc/clipboard` y se libera la memoria reservada mediante `vfree()`, evitando pérdidas de memoria dentro del kernel.
+
+<img width="636" height="330" alt="image" src="https://github.com/user-attachments/assets/ccd146f6-706f-4253-bab9-5312928f3cfb" />
+
+<img width="636" height="330" alt="image" src="https://github.com/user-attachments/assets/8b067628-9917-4506-9e81-2c4bd4e0dbb0" />
+
+<img width="636" height="453" alt="image" src="https://github.com/user-attachments/assets/d0f899fb-2571-4332-ac4a-2c6331c41064" />
+
+
